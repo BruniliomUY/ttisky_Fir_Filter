@@ -1,5 +1,5 @@
 module wave_buffer #(
-  parameter DEPTH = 160,   // 1 entrada cada 4 columnas de pantalla (640/4)
+  parameter DEPTH = 90,   // 1 entrada cada 4 columnas de pantalla (640/4)
   parameter WIDTH = 8
 )(
   input                     clk,
