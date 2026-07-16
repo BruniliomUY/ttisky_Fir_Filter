@@ -18,7 +18,7 @@ module transmitter (
       state <= IDLE;
       tx    <= 1'b1;
     end else begin
-      case (state)
+      
         IDLE: begin
           tx <= 1'b1;
           if (wr_en) begin
