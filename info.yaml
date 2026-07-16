@@ -3,7 +3,7 @@ project:
   title:        "Fir_Filter"      # Project title
   author:       "Bruno Moreira"      # Your name
   discord:      "bruniliom"      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A simple FIR filter implementation with waveform visualization"      # One line description of what your project does
+  description:  "A simple FIR filter implementation with UART communication"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     25000000       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -19,11 +19,8 @@ project:
   source_files:
     - "tt_um_bruniliomuy_top.v"
     - "filtro_fir.v"
-    - "hvsync_generator.v"
     - "SatTruncFP.v"
     - "uart_tx.v"
-    - "wave_buffer.v"
-    - "wave_plot.v" 
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
@@ -39,14 +36,14 @@ pinout:
   ui[7]: "Signal to filter[7]"
 
   # Outputs
-  uo[0]: "b[1]"
-  uo[1]: "g[1]"
-  uo[2]: "r[1]"
-  uo[3]: "vsync_w"
-  uo[4]: "b[0]"
-  uo[5]: "g[0]"
-  uo[6]: "r[0]"
-  uo[7]: "hsync_w"
+  uo[0]: "0"
+  uo[1]: "0"
+  uo[2]: "0"
+  uo[3]: "0
+  uo[4]: "0"
+  uo[5]: "0"
+  uo[6]: "0"
+  uo[7]: "0"
 
   # Bidirectional pins
   uio[0]: "tx_w"
