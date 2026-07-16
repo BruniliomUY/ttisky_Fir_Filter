@@ -43,8 +43,7 @@ module filtro_fir
   // Internal Signals
   reg  [1:0]                          state;
   reg  [3:0]                          idx;         // recorre los taps 0..14
-  reg  signed [WW_INPUT          -1:0] register [14:1]; // x[n-1] .. x[n-14]
-  reg  signed [WW_INPUT          -1:0] captured_x0;      // x[n] capturado al arrancar
+  reg  signed [WW_INPUT          -1:0] register [14:0]; // register[0]=x[n] .. register[14]=x[n-14]
   reg  signed [WW_INPUT+WW_COEFF+4-1:0] acc;             // acumulador (20 bits)
   reg  signed [WW_INPUT+WW_COEFF+4-1:0] sum_final;       // resultado ya completo -> SatTruncFP
 
@@ -135,7 +134,7 @@ module filtro_fir
        (i_filter_sel == 2'd2) ? bank2[idx] :
                                 bank3[idx];
 
-  wire signed [WW_INPUT-1:0] sample_sel = (idx == 4'd0) ? captured_x0 : register[idx];
+  wire signed [WW_INPUT-1:0] sample_sel = register[idx];
 
   wire signed [WW_INPUT+WW_COEFF  -1:0] prod     = coeff_sel * sample_sel; // 16 bits
   wire signed [WW_INPUT+WW_COEFF+4-1:0] prod_ext = {{4{prod[WW_INPUT+WW_COEFF-1]}}, prod}; // sign-extend a 20 bits
@@ -151,19 +150,18 @@ module filtro_fir
       idx         <= 4'd0;
       acc         <= {(WW_INPUT+WW_COEFF+4){1'b0}};
       sum_final   <= {(WW_INPUT+WW_COEFF+4){1'b0}};
-      captured_x0 <= {WW_INPUT{1'b0}};
-      for (r = 1; r <= 14; r = r + 1)
+      for (r = 0; r <= 14; r = r + 1)
         register[r] <= {WW_INPUT{1'b0}};
     end else begin
       case (state)
 
-        // Esperando una muestra nueva. Si llega i_en: se captura x[n], se
-        // corre el shift register, y se arranca la FSM de MAC desde idx=0.
+        // Esperando una muestra nueva. Si llega i_en: se corre el shift
+        // register (register[0] <= x[n] nuevo, el resto se corre una
+        // posicion), y se arranca la FSM de MAC desde idx=0.
         S_IDLE: begin
           if (i_en) begin
-            captured_x0 <= i_data;
-            register[1] <= i_data;
-            for (r = 2; r <= 14; r = r + 1)
+            register[0] <= i_data;
+            for (r = 1; r <= 14; r = r + 1)
               register[r] <= register[r-1];
             idx   <= 4'd0;
             acc   <= {(WW_INPUT+WW_COEFF+4){1'b0}};
