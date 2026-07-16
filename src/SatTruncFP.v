@@ -35,26 +35,30 @@ module SatTruncFP
 //=======================================================
 	generate
 	   if (NBF_XI >= NBF_XO)
-	     begin :
+	     begin : gen_trunc_wide
 		assign	aux_trunc = i_data[(NBF_XI-1):(NBF_XI - NBF_XO)];
 	     end
 	   else
-	     begin :
+	     begin : gen_trunc_narrow
 		assign	aux_trunc = {i_data[NBF_XI-1:0],{(NBF_XO - NBF_XI){1'b0}}};
 	     end
 	   if (NBI_XI > NBI_XO)
-	     begin :
+	     begin : gen_sat_shrink
 		assign	condicion		=	(i_data[(NB_XI-2)-:(NBI_XI-NBI_XO)] == {(NBI_XI-NBI_XO){i_data[NB_XI-1]}});
 		assign	resultado1		=	{i_data[(NB_XI-1)],{(NB_XO-1){~i_data[(NB_XI-1)]}}};
 		assign	resultado2		=	{i_data[(NB_XI-1)],i_data[NBF_XI +:NBI_XO-1],aux_trunc};
 		assign	aux_Sat			=	condicion	?	resultado2	:	resultado1;
 	     end
 	   else
-	     begin :
+	     begin : gen_sat_grow
 		if (NBI_XO == NBI_XI)
-                  assign  aux_Sat = {i_data[(NB_XI-1)-:NBI_XI],aux_trunc};
+                  begin : gen_sat_equal
+                     assign  aux_Sat = {i_data[(NB_XI-1)-:NBI_XI],aux_trunc};
+                  end
 		else
-		  assign  aux_Sat	= {{(NBI_XO - NBI_XI){i_data[NB_XI-1]}},i_data[(NB_XI-1)-:NBI_XI],aux_trunc};
+                  begin : gen_sat_extend
+                     assign  aux_Sat	= {{(NBI_XO - NBI_XI){i_data[NB_XI-1]}},i_data[(NB_XI-1)-:NBI_XI],aux_trunc};
+                  end
 	     end
 	endgenerate
    assign	o_data=aux_Sat;
