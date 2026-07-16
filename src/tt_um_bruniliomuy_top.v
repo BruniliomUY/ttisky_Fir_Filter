@@ -33,7 +33,8 @@ wire signed [7:0] fir_output;
 //Buffer_timing
 localparam integer CLK_HZ    = 25_000_000;
 localparam integer SAMPLE_HZ = 8_000; // debe coincidir con lo asumido en filtro_fir/testbenches
-localparam [11:0]  DIVIDER   = CLK_HZ / SAMPLE_HZ;
+localparam [31:0]  DIVIDER_FULL = CLK_HZ / SAMPLE_HZ;
+localparam [11:0]  DIVIDER      = DIVIDER_FULL[11:0];
 
 reg [11:0] sample_cnt;
 wire sample_tick = (sample_cnt == DIVIDER-12'd1);
@@ -45,7 +46,8 @@ end
 
 //Baud_Rate
 localparam integer BAUD         = 115200;
-localparam [15:0]  BAUD_DIVIDER = CLK_HZ / BAUD;
+localparam [31:0]  BAUD_DIVIDER_FULL = CLK_HZ / BAUD;
+localparam [15:0]  BAUD_DIVIDER      = BAUD_DIVIDER_FULL[15:0];
 
 reg [15:0] baud_cnt;
 wire baud_tick = (baud_cnt == BAUD_DIVIDER-16'd1);
