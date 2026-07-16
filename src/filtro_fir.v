@@ -1,18 +1,21 @@
-//! @title FIR Filter - 15 taps con selector de coeficientes
+//! @title FIR Filter - 15 taps, arquitectura serie (1 MAC)
 //! @file filtro_fir.v
 //! @author  Bruno Moreira
 //! @date 2026
-//! @version Unit04 - 15 taps + pipeline + i_filter_sel (vuelta a 15 taps, VGA removido)
+//! @version Unit05 - FIR serie: 1 multiplicador reusado x15, en vez de 15 en paralelo
 //!
-//! - FIR de 15 coeficientes, adder tree pipelined en 3 niveles.
-//! - i_filter_sel[1:0] elige entre 4 bancos de coeficientes (Q1.7, fs = 8000 Hz):
-//!     00 -> Pasa-altos : rechazo 0-1000 Hz    / paso 1500-4000 Hz  (remez, 15 taps)
-//!     01 -> Pasa-bajos : paso    0-1000 Hz    / rechazo 1500-4000 Hz (remez, 15 taps)
-//!     10 -> Pasa-banda : pico ~2.6 kHz (coeficientes provistos)
-//!     11 -> Pasa-todo  : delay/eco con ganancia ~1 (0.99219)
+//! - Misma interfaz y mismos 4 bancos que la version paralela (Q1.7, fs=8000 Hz):
+//!     00 -> Pasa-altos, 01 -> Pasa-bajos, 10 -> Pasa-banda, 11 -> Pasa-todo
+//! - En vez de 15 multiplicadores + arbol de sumas, se usa 1 multiplicador y un
+//!   acumulador, recorriendo los 15 taps con una FSM (IDLE -> MAC x15 -> DONE).
+//!   Cuesta 17 ciclos de clock de latencia en vez de 5, pero eso sigue siendo
+//!   insignificante frente a los ~3125 ciclos que hay entre muestra y muestra
+//!   a fs=8000 Hz con clk=25 MHz.
 //! - **i_srst** es el reset del sistema.
-//! - **i_en** habilita (1) el corrimiento del FIR. En (0) el filtro se detiene sin
-//!   modificar el estado actual.
+//! - **i_en** ahora es un PULSO que dispara el comienzo del computo de una
+//!   muestra nueva (se ignora si llega mientras la FSM esta ocupada con la
+//!   muestra anterior - en la practica nunca deberia pasar con el sample_tick
+//!   que ya tenes en el top).
 
 module filtro_fir
   #(
@@ -33,22 +36,21 @@ module filtro_fir
   // Local Params
   localparam WW_COEFF = 8;
 
+  localparam [1:0] S_IDLE = 2'd0,
+                    S_MAC  = 2'd1,
+                    S_DONE = 2'd2;
+
   // Internal Signals
-   reg  signed [WW_INPUT           -1:0] register [14:1];
-   wire signed [         WW_COEFF  -1:0] coeff    [14:0];
-   wire signed [WW_INPUT+WW_COEFF  -1:0] prod     [14:0];
-   reg  signed [WW_INPUT+WW_COEFF  -1:0] prod_d   [14:0];
-   wire signed [WW_INPUT+WW_COEFF+1-1:0] sum      [8:1];
-   reg  signed [WW_INPUT+WW_COEFF+1-1:0] sum_d    [8:1];
-   wire signed [WW_INPUT+WW_COEFF+2-1:0] sum1     [4:1];
-   reg  signed [WW_INPUT+WW_COEFF+2-1:0] sum1_d   [4:1];
-   wire signed [WW_INPUT+WW_COEFF+3-1:0] sum2     [2:1];
-   reg  signed [WW_INPUT+WW_COEFF+3-1:0] sum2_d   [2:1];
-   wire signed [WW_INPUT+WW_COEFF+4-1:0] sum3;
-   reg  signed [WW_INPUT+WW_COEFF+4-1:0] sum3_d;
+  reg  [1:0]                          state;
+  reg  [3:0]                          idx;         // recorre los taps 0..14
+  reg  signed [WW_INPUT          -1:0] register [14:1]; // x[n-1] .. x[n-14]
+  reg  signed [WW_INPUT          -1:0] captured_x0;      // x[n] capturado al arrancar
+  reg  signed [WW_INPUT+WW_COEFF+4-1:0] acc;             // acumulador (20 bits)
+  reg  signed [WW_INPUT+WW_COEFF+4-1:0] sum_final;       // resultado ya completo -> SatTruncFP
 
   //=======================================================
   //  Bancos de coeficientes (Q1.7), 15 taps, fs = 8000 Hz
+  //  (identicos a la version paralela)
   //=======================================================
 
   // Banco 0: Pasa-altos (remez, rechazo 0-1000 Hz / paso 1500-4000 Hz)
@@ -123,99 +125,79 @@ module filtro_fir
   assign bank3[13] = 8'h00;
   assign bank3[14] = 8'h00;
 
-  // Multiplexado del banco activo segun i_filter_sel
-  genvar gc;
-  generate
-    for (gc = 0; gc < 15; gc = gc + 1) begin : g_sel_coeff
-      assign coeff[gc] =
-       (i_filter_sel == 2'd0) ? bank0[gc] :
-       (i_filter_sel == 2'd1) ? bank1[gc] :
-       (i_filter_sel == 2'd2) ? bank2[gc] :
-                                bank3[gc];
-    end
-  endgenerate
-
   //=======================================================
-  //  Datapath (15 taps, adder tree pipelined en 3 niveles)
+  //  Selección de coeficiente y muestra para el tap actual (idx)
   //=======================================================
 
-  // Shift Register: x[n-1] .. x[n-14]
-  integer i;
+  wire signed [WW_COEFF-1:0] coeff_sel =
+       (i_filter_sel == 2'd0) ? bank0[idx] :
+       (i_filter_sel == 2'd1) ? bank1[idx] :
+       (i_filter_sel == 2'd2) ? bank2[idx] :
+                                bank3[idx];
+
+  wire signed [WW_INPUT-1:0] sample_sel = (idx == 4'd0) ? captured_x0 : register[idx];
+
+  wire signed [WW_INPUT+WW_COEFF  -1:0] prod     = coeff_sel * sample_sel; // 16 bits
+  wire signed [WW_INPUT+WW_COEFF+4-1:0] prod_ext = {{4{prod[WW_INPUT+WW_COEFF-1]}}, prod}; // sign-extend a 20 bits
+
+  //=======================================================
+  //  FSM: IDLE (espera i_en) -> MAC x15 -> DONE (latch resultado)
+  //=======================================================
+
+  integer r;
   always @(posedge clk) begin
-    if (i_srst == 1'b1) begin
-      for (i = 1; i <= 14; i = i + 1)
-        register[i] <= {WW_INPUT{1'b0}};
+    if (i_srst) begin
+      state       <= S_IDLE;
+      idx         <= 4'd0;
+      acc         <= {(WW_INPUT+WW_COEFF+4){1'b0}};
+      sum_final   <= {(WW_INPUT+WW_COEFF+4){1'b0}};
+      captured_x0 <= {WW_INPUT{1'b0}};
+      for (r = 1; r <= 14; r = r + 1)
+        register[r] <= {WW_INPUT{1'b0}};
     end else begin
-      if (i_en == 1'b1) begin
-        register[1] <= i_data;
-        for (i = 2; i <= 14; i = i + 1)
-          register[i] <= register[i-1];
-      end
+      case (state)
+
+        // Esperando una muestra nueva. Si llega i_en: se captura x[n], se
+        // corre el shift register, y se arranca la FSM de MAC desde idx=0.
+        S_IDLE: begin
+          if (i_en) begin
+            captured_x0 <= i_data;
+            register[1] <= i_data;
+            for (r = 2; r <= 14; r = r + 1)
+              register[r] <= register[r-1];
+            idx   <= 4'd0;
+            acc   <= {(WW_INPUT+WW_COEFF+4){1'b0}};
+            state <= S_MAC;
+          end
+        end
+
+        // Un tap por ciclo: acumula coeff[idx]*sample[idx] y avanza idx.
+        // Al llegar a idx==14 (ultimo tap) pasa a DONE.
+        S_MAC: begin
+          acc <= acc + prod_ext;
+          if (idx == 4'd14) begin
+            state <= S_DONE;
+          end else begin
+            idx <= idx + 4'd1;
+          end
+        end
+
+        // El acumulador ya tiene la convolucion completa: se copia a
+        // sum_final (que alimenta a SatTruncFP) y se vuelve a IDLE.
+        S_DONE: begin
+          sum_final <= acc;
+          state     <= S_IDLE;
+        end
+
+        default: state <= S_IDLE;
+      endcase
     end
   end
-
-  // Products
-  assign prod[0] = coeff[0] * i_data;
-  generate
-    genvar gp;
-    for (gp = 1; gp <= 14; gp = gp + 1) begin : g_prod
-      assign prod[gp] = coeff[gp] * register[gp];
-    end
-  endgenerate
-
-  always @(posedge clk) begin
-    integer j;
-    for (j = 0; j <= 14; j = j + 1)
-      prod_d[j] <= prod[j];
-  end
-
-  // Nivel 1: 14 productos en 7 pares (16.12+16.12=17.12) + el tap 14 solo, sign-extendido
-  assign sum[1] = prod_d[ 0] + prod_d[ 1];
-  assign sum[2] = prod_d[ 2] + prod_d[ 3];
-  assign sum[3] = prod_d[ 4] + prod_d[ 5];
-  assign sum[4] = prod_d[ 6] + prod_d[ 7];
-  assign sum[5] = prod_d[ 8] + prod_d[ 9];
-  assign sum[6] = prod_d[10] + prod_d[11];
-  assign sum[7] = prod_d[12] + prod_d[13];
-  assign sum[8] = {prod_d[14][WW_INPUT+WW_COEFF-1], prod_d[14]};
-
-  always @(posedge clk) begin
-    integer k;
-    for (k = 1; k <= 8; k = k + 1)
-      sum_d[k] <= sum[k];
-  end
-
-  // Nivel 2: 17.12 + 17.12 = 18.12
-  assign sum1[1] = sum_d[1] + sum_d[2];
-  assign sum1[2] = sum_d[3] + sum_d[4];
-  assign sum1[3] = sum_d[5] + sum_d[6];
-  assign sum1[4] = sum_d[7] + sum_d[8];
-
-  always @(posedge clk) begin
-    integer m;
-    for (m = 1; m <= 4; m = m + 1)
-      sum1_d[m] <= sum1[m];
-  end
-
-  // Nivel 3: 18.12 + 18.12 = 19.12
-  assign sum2[1] = sum1_d[1] + sum1_d[2];
-  assign sum2[2] = sum1_d[3] + sum1_d[4];
-
-  always @(posedge clk) begin
-    sum2_d[1] <= sum2[1];
-    sum2_d[2] <= sum2[2];
-  end
-
-  // Final: 19.12 + 19.12 = 20.12
-  assign sum3 = sum2_d[1] + sum2_d[2];
-
-  always @(posedge clk)
-    sum3_d <= sum3;
 
   SatTruncFP
     inst_SatTruncFP_dataB
     (
-      .i_data ( sum3_d ),
+      .i_data ( sum_final ),
       .o_data ( o_data )
     );
 
