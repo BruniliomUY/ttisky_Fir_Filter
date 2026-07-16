@@ -35,22 +35,22 @@ module SatTruncFP
 //=======================================================
 	generate
 	   if (NBF_XI >= NBF_XO)
-	     begin
+	     begin :
 		assign	aux_trunc = i_data[(NBF_XI-1):(NBF_XI - NBF_XO)];
 	     end
 	   else
-	     begin
+	     begin :
 		assign	aux_trunc = {i_data[NBF_XI-1:0],{(NBF_XO - NBF_XI){1'b0}}};
 	     end
 	   if (NBI_XI > NBI_XO)
-	     begin
+	     begin :
 		assign	condicion		=	(i_data[(NB_XI-2)-:(NBI_XI-NBI_XO)] == {(NBI_XI-NBI_XO){i_data[NB_XI-1]}});
 		assign	resultado1		=	{i_data[(NB_XI-1)],{(NB_XO-1){~i_data[(NB_XI-1)]}}};
 		assign	resultado2		=	{i_data[(NB_XI-1)],i_data[NBF_XI +:NBI_XO-1],aux_trunc};
 		assign	aux_Sat			=	condicion	?	resultado2	:	resultado1;
 	     end
 	   else
-	     begin
+	     begin :
 		if (NBI_XO == NBI_XI)
                   assign  aux_Sat = {i_data[(NB_XI-1)-:NBI_XI],aux_trunc};
 		else
