@@ -47,10 +47,10 @@ end
 //Baud_Rate
 localparam integer BAUD         = 115200;
 localparam [31:0]  BAUD_DIVIDER_FULL = CLK_HZ / BAUD;
-localparam [15:0]  BAUD_DIVIDER      = BAUD_DIVIDER_FULL[15:0];
+localparam [7:0]   BAUD_DIVIDER      = BAUD_DIVIDER_FULL[7:0]; // ~217, entra en 8 bits
 
-reg [15:0] baud_cnt;
-wire baud_tick = (baud_cnt == BAUD_DIVIDER-16'd1);
+reg [7:0] baud_cnt;
+wire baud_tick = (baud_cnt == BAUD_DIVIDER-8'd1);
 
 always @(posedge clk) begin
   if (!rst_n) baud_cnt <= 0;
