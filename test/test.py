@@ -12,6 +12,10 @@ CLK_PERIOD_NS = 40
 # (CLK_HZ / SAMPLE_HZ = 25_000_000 / 8_000)
 SAMPLE_DIVIDER = 25_000_000 // 8_000
 
+# Debe coincidir con BAUD_DIVIDER en tt_um_bruniliomuy_top.v
+# (CLK_HZ / BAUD = 25_000_000 / 115200)
+BAUD_DIVIDER = 25_000_000 // 115_200
+
 FILTER_HIGHPASS = 0b00
 FILTER_LOWPASS = 0b01
 FILTER_ALLPASS = 0b10
@@ -65,7 +69,7 @@ async def test_reset_no_x(dut):
     await reset_dut(dut)
     await ClockCycles(dut.clk, 10)
 
-    assert "x" not in dut.uo_out.value.binstr.lower(), (
+    assert "x" not in str(dut.uo_out.value).lower(), (
         "uo_out quedo en X/Z despues del reset"
     )
 
@@ -85,7 +89,8 @@ async def test_allpass_tracks_input(dut):
     test_value = 40  # muestra de entrada (Q1.7 ~ 0.3125)
     await settle_filter(dut, test_value)
 
-    fir_out = to_signed8(dut.user_project.fir_output.value)
+    # NOTA: la instancia del DUT en tb.v se llama "fir_filter", no "user_project".
+    fir_out = to_signed8(dut.fir_filter.fir_output.value)
     dut._log.info(f"fir_output (allpass) = {fir_out}, esperado ~ {test_value}")
 
     # Tolerancia amplia a proposito: solo confirmamos que sigue la entrada,
@@ -113,7 +118,7 @@ async def test_filter_select_changes_output(dut):
         await reset_dut(dut)
         set_filter(dut, sel)
         await settle_filter(dut, 40)
-        outputs[name] = to_signed8(dut.user_project.fir_output.value)
+        outputs[name] = to_signed8(dut.fir_filter.fir_output.value)
         dut._log.info(f"fir_output ({name}) = {outputs[name]}")
 
     assert len(set(outputs.values())) > 1, (
@@ -121,19 +126,61 @@ async def test_filter_select_changes_output(dut):
         "revisar el generate/mux de i_filter_sel en filtro_fir.v"
     )
 
+
+@cocotb.test()
+async def test_vga_sync_toggles(dut):
+    """hsync debe alternar en algun momento: confirma que hvsync_generator corre.
+
+    NOTA: si el modulo VGA fue removido del top (ver comentario en
+    tt_um_bruniliomuy_top.v: "VGA removido por area"), este test ya no aplica
+    y deberia eliminarse o saltarse (pytest.skip), en vez de fallar.
+    """
+    await start_clock(dut)
+    await reset_dut(dut)
+
+    if not hasattr(dut.fir_filter, "hsync_w"):
+        dut._log.warning(
+            "hsync_w no existe en el DUT (VGA removido del diseño); "
+            "test omitido."
+        )
+        return
+
+    seen = set()
+    for _ in range(5000):
+        await ClockCycles(dut.clk, 1)
+        seen.add(int(dut.fir_filter.hsync_w.value))
+        if len(seen) > 1:
+            break
+
+    assert len(seen) > 1, "hsync nunca cambio de valor en 5000 ciclos: revisar hvsync_generator"
+
+
 @cocotb.test()
 async def test_uart_tx_activity(dut):
-    """Confirma actividad en la linea TX (uio_out[0]) tras varias muestras."""
+    """Confirma actividad en la linea TX (uio_out[0]) tras varias muestras.
+
+    Muestreamos con paso FINO (bien por debajo del periodo de baud_tick,
+    ~217 ciclos de clk) durante varios periodos de sample_tick completos.
+    El test anterior solo miraba uio_out una vez por cada sample_tick
+    (cada 3125 ciclos), pero un frame UART completo (start+8 datos+stop =
+    10 bits = ~2170 ciclos) termina ANTES de que llegue el siguiente
+    sample_tick, dejando ~955 ciclos de linea inactiva (tx=1) en cada
+    periodo. Si el punto de muestreo caia siempre en esa ventana inactiva,
+    el test fallaba por aliasing, no porque el UART estuviera roto.
+    """
     await start_clock(dut)
     await reset_dut(dut)
     dut.ui_in.value = 60
 
     seen = set()
-    for _ in range(8):
-        await ClockCycles(dut.clk, SAMPLE_DIVIDER)
+    step = max(1, BAUD_DIVIDER // 20)          # paso fino, << periodo de baud_tick
+    total_cycles = SAMPLE_DIVIDER * 3           # cubrir >2 periodos de muestra completos
+
+    for _ in range(total_cycles // step):
+        await ClockCycles(dut.clk, step)
         seen.add(int(dut.uio_out.value) & 0b1)
 
     assert len(seen) > 1, (
-        "TX nunca cambio de nivel en 8 periodos de muestreo; "
+        "TX nunca cambio de nivel en varios periodos de muestreo; "
         "revisar baud_tick / wr_en en el transmitter"
     )
