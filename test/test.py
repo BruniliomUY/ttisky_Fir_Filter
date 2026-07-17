@@ -121,23 +121,6 @@ async def test_filter_select_changes_output(dut):
         "revisar el generate/mux de i_filter_sel en filtro_fir.v"
     )
 
-
-@cocotb.test()
-async def test_vga_sync_toggles(dut):
-    """hsync debe alternar en algun momento: confirma que hvsync_generator corre."""
-    await start_clock(dut)
-    await reset_dut(dut)
-
-    seen = set()
-    for _ in range(5000):
-        await ClockCycles(dut.clk, 1)
-        seen.add(int(dut.user_project.hsync_w.value))
-        if len(seen) > 1:
-            break
-
-    assert len(seen) > 1, "hsync nunca cambio de valor en 5000 ciclos: revisar hvsync_generator"
-
-
 @cocotb.test()
 async def test_uart_tx_activity(dut):
     """Confirma actividad en la linea TX (uio_out[0]) tras varias muestras."""

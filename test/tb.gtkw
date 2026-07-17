@@ -40,16 +40,6 @@ tb.user_project.sample_tick
 tb.user_project.fir_output[7:0]
 tb.user_project.buffered_sample[7:0]
 @200
--VGA
-@28
-tb.user_project.hsync_w
-tb.user_project.vsync_w
-tb.user_project.display_on_w
-tb.user_project.pixel_on_w
-@22
-tb.user_project.hpos_w[9:0]
-tb.user_project.vpos_w[9:0]
-@200
 -UART
 @28
 tb.user_project.baud_tick
