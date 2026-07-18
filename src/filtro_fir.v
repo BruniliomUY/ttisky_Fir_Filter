@@ -173,11 +173,8 @@ module filtro_fir
 
   SatTruncFP
     #(
-    .NB_XI  ( WW_ACC ),        // 19 — unchanged
-    .NBF_XI ( WW_COEFF - 1 ),  // 7  — matches the Q1.7 coefficient scale
-    .NB_XO  ( WW_OUTPUT ),     // 8  — unchanged
-    .NBF_XO ( 0 )              // 0  — output has no fractional bits, same scale as i_data
-    )
+      .NB_XI  ( WW_ACC ) // 19 bits (NBF_XI se deja en su default, 12)
+      )
     inst_SatTruncFP_dataB
     (
       .i_data ( sum_final ),
