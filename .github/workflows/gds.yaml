@@ -38,11 +38,11 @@ jobs:
         if: always()
         run: |
           echo "--- locating sky130A dir (PDK_ROOT not set in this step) ---"
-          find / -maxdepth 5 -iname "sky130A" -type d 2>/dev/null
+          find / -maxdepth 5 -iname "sky130A" -type d 2>/dev/null || true
           echo "--- io verilog files ---"
-          find /home/runner/pdk/sky130A/libs.ref -path "*io*verilog*" -name "*.v" 2>/dev/null
+          find /home/runner/pdk/sky130A/libs.ref -path "*io*verilog*" -name "*.v" 2>/dev/null || true
           echo "--- stdcell verilog files ---"
-          find /home/runner/pdk/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v" 2>/dev/null
+          find /home/runner/pdk/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v" 2>/dev/null || true
       - name: Fail job if GL test failed
         if: steps.gl_test.outcome == 'failure'
         run: exit 1
