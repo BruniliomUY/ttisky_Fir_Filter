@@ -1,9 +1,9 @@
 module SatTruncFP
   #(
     parameter	NB_XI  	= 20,
-    parameter	NBF_XI	= 12,
+    parameter	NBF_XI	= 7,
     
-    parameter	NB_XO	= 8,
+    parameter	NB_XO	= 0,
     parameter	NBF_XO	= 6
     )
    (
