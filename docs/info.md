@@ -16,9 +16,12 @@ Hight pass
 Low pass
 Band pass
 All pass 
+## Frequency Response
+
+![Frequency Response](filter_frequency_response.png)
 
 ## How to test
-To use the proyect you need to define filtter coeficient by seection them with uio[1] and [2] pins. Also the 8bits input signal, 
+To use the proyect you need to define filtter coeficient by seection them with uio[1] and [2] pins. Also the 8bits input signal, into the ui[1] and [2] 
 
 ## External hardware
 No external hardware needed.
