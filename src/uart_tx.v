@@ -15,8 +15,10 @@ module transmitter (
 
   always @(posedge clk) begin
     if (rst) begin
-      state <= IDLE;
-      tx    <= 1'b1;
+          state   <= IDLE;
+          tx      <= 1'b1;
+          data    <= 8'd0;
+          bit_idx <= 3'd0;
     end else begin
        case (state)
         IDLE: begin
