@@ -37,7 +37,12 @@ jobs:
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
         with:
           pdk: sky130A
-          
+      - name: Debug PDK contents
+        run: |
+          echo "--- io verilog files ---"
+          find $PDK_ROOT/sky130A/libs.ref -path "*io*verilog*" -name "*.v"
+          echo "--- stdcell verilog files ---"
+          find $PDK_ROOT/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v"
       - name: Debug PDK contents
         run: find $PDK_ROOT/sky130A/libs.ref -iname "*io*.v" -o -iname "*stdcell*.v"
         
