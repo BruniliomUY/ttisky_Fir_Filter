@@ -37,7 +37,10 @@ jobs:
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
         with:
           pdk: sky130A
-
+          
+      - name: Debug PDK contents
+        run: find $PDK_ROOT/sky130A/libs.ref -iname "*io*.v" -o -iname "*stdcell*.v"
+        
       - name: GL test
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
 
