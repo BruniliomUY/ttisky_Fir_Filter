@@ -24,21 +24,25 @@ jobs:
     steps:
       - name: Run Tiny Tapeout Precheck
         uses: TinyTapeout/tt-gds-action/precheck@ttsky26c
-
-  gl_test:
-  needs: gds
-  runs-on: ubuntu-24.04
-  steps:
-    - name: checkout repo
-      uses: actions/checkout@v6
-      with:
-        submodules: recursive
-    - name: GL test
-      uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
-      with:
-        pdk: sky130A
-        # Optionally specify simulator or add flags to handle UDPs
-        simulator: verilator  # or use a simulator with better UDP support
+    needs: gds
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: GL test
+        uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
+        with:
+          pdk: sky130A
+      - name: Debug PDK contents
+        run: |
+          echo "--- io verilog files ---"
+          find $PDK_ROOT/sky130A/libs.ref -path "*io*verilog*" -name "*.v"
+          echo "--- stdcell verilog files ---"
+          find $PDK_ROOT/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v"
+      - name: Debug PDK contents
+        run: find $PDK_ROOT/sky130A/libs.ref -iname "*io*.v" -o -iname "*stdcell*.v"
   viewer:
     needs: gds
     runs-on: ubuntu-24.04
