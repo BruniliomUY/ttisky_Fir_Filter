@@ -18,8 +18,8 @@ BAUD_DIVIDER = 25_000_000 // 115_200
 
 FILTER_HIGHPASS = 0b00
 FILTER_LOWPASS = 0b01
-FILTER_BANDPASS = 0b10
-FILTER_ALLPASS = 0b11
+FILTER_ALLPASS = 0b10
+FILTER_NOTCH = 0b11
 
 
 def to_signed8(raw):
@@ -112,8 +112,8 @@ async def test_filter_select_changes_output(dut):
     for sel, name in [
         (FILTER_HIGHPASS, "highpass"),
         (FILTER_LOWPASS, "lowpass"),
-        (FILTER_BANDPASS, "bandpass"),
         (FILTER_ALLPASS, "allpass"),
+        (FILTER_NOTCH, "notch"),
     ]:
         await reset_dut(dut)
         set_filter(dut, sel)

@@ -15,6 +15,12 @@
 //! - **i_srst** es el reset del sistema.
 //! - **i_en** es un PULSO que dispara el comienzo del computo de una muestra
 //!   nueva (se ignora si llega mientras la FSM esta ocupada con la anterior).
+//!
+//! - FIX (test_allpass_tracks_input): la instanciacion de SatTruncFP no
+//!   tenia bien seteado NBF_XI/NBF_XO. El acumulador (sum_final) tiene 7
+//!   bits fraccionarios (mismo formato Q1.7 que los coeficientes), no los
+//!   12 que quedaban por default. Y la salida o_data debe quedar en la
+//!   misma escala entera que i_data (0 bits fraccionarios), no 6.
 
 module filtro_fir
   #(
@@ -171,17 +177,22 @@ module filtro_fir
     end
   end
 
-SatTruncFP
-  #(
-    .NB_XI  ( WW_ACC ),        // 19
-    .NBF_XI ( WW_COEFF - 1 ),  // must evaluate to 7
-    .NB_XO  ( WW_OUTPUT ),     // 8
-    .NBF_XO ( 0 )
-    )
-  inst_SatTruncFP_dataB
-  (
-    .i_data ( sum_final ),
-    .o_data ( o_data )
-  );
+  // FIX: NBF_XI=7 -> el acumulador de 19 bits tiene 7 bits fraccionarios
+  // (mismo formato Q1.7 que los coeficientes, no los 12 que quedaban por
+  // default). NBF_XO=0 -> o_data queda en la misma escala entera que
+  // i_data (sin bits fraccionarios), que es lo que esperan el resto del
+  // top module (UART, uo_out) y los tests.
+  SatTruncFP
+    #(
+      .NB_XI  ( WW_ACC     ), // 19
+      .NBF_XI ( WW_COEFF - 1), // 7
+      .NB_XO  ( WW_OUTPUT  ), // 8
+      .NBF_XO ( 0          )  // 0
+      )
+    inst_SatTruncFP_dataB
+    (
+      .i_data ( sum_final ),
+      .o_data ( o_data )
+    );
 
 endmodule
