@@ -61,6 +61,20 @@ module SatTruncFP
                   end
 	     end
 	endgenerate
+   generate
+   if (NBF_XO == 0)
+     begin : gen_trunc_zero
+        assign  aux_trunc = {NBF_XO{1'b0}};   // 0 repetitions = valid zero-width value
+     end
+   else if (NBF_XI >= NBF_XO)
+     begin : gen_trunc_wide
+        assign  aux_trunc = i_data[(NBF_XI-1):(NBF_XI - NBF_XO)];
+     end
+   else
+     begin : gen_trunc_narrow
+        assign  aux_trunc = {i_data[NBF_XI-1:0],{(NBF_XO - NBF_XI){1'b0}}};
+     end
+endgenerate
    assign	o_data=aux_Sat;
       
 endmodule
