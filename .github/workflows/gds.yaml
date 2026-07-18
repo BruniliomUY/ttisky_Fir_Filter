@@ -30,14 +30,22 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
-      - name: Debug PDK contents
-        run: |
-          echo "--- io verilog files ---"
-          find $PDK_ROOT/sky130A/libs.ref -path "*io*verilog*" -name "*.v"
-          echo "--- stdcell verilog files ---"
-          find $PDK_ROOT/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v"
       - name: GL test
+        id: gl_test
+        continue-on-error: true
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
+      - name: Debug PDK contents
+        if: always()
+        run: |
+          echo "--- locating sky130A dir (PDK_ROOT not set in this step) ---"
+          find / -maxdepth 5 -iname "sky130A" -type d 2>/dev/null
+          echo "--- io verilog files ---"
+          find /home/runner/pdk/sky130A/libs.ref -path "*io*verilog*" -name "*.v" 2>/dev/null
+          echo "--- stdcell verilog files ---"
+          find /home/runner/pdk/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v" 2>/dev/null
+      - name: Fail job if GL test failed
+        if: steps.gl_test.outcome == 'failure'
+        run: exit 1
 
   viewer:
     needs: gds
