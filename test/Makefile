@@ -22,6 +22,7 @@ SIM_BUILD				= sim_build/gl
 COMPILE_ARGS    += -DGL_TEST
 COMPILE_ARGS    += -DFUNCTIONAL
 COMPILE_ARGS    += -DSIM
+COMPILE_ARGS    += -DUSE_POWER_PINS
 # FIX: estos apuntaban a ihp-sg13g2 (otro PDK) y despues a nombres de
 # archivo que no existian en sky130A. Confirmado por debug en CI que los
 # archivos reales son:
