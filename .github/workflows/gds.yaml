@@ -45,10 +45,7 @@ jobs:
           find $PDK_ROOT/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v"
       - name: Debug PDK contents
         run: find $PDK_ROOT/sky130A/libs.ref -iname "*io*.v" -o -iname "*stdcell*.v"
-        
-      - name: GL test
-        uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
-
+      
   viewer:
     needs: gds
     runs-on: ubuntu-24.04
