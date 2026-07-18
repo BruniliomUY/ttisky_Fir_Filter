@@ -25,27 +25,26 @@ jobs:
       - name: Run Tiny Tapeout Precheck
         uses: TinyTapeout/tt-gds-action/precheck@ttsky26c
 
-  gl_test:
-    needs: gds
-    runs-on: ubuntu-24.04
-    steps:
-      - name: checkout repo
-        uses: actions/checkout@v6
-        with:
-          submodules: recursive
-      - name: GL test
-        uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
-        with:
-          pdk: sky130A
-      - name: Debug PDK contents
-        run: |
-          echo "--- io verilog files ---"
-          find $PDK_ROOT/sky130A/libs.ref -path "*io*verilog*" -name "*.v"
-          echo "--- stdcell verilog files ---"
-          find $PDK_ROOT/sky130A/libs.ref -path "*sc_hd*verilog*" -name "*.v"
-      - name: Debug PDK contents
-        run: find $PDK_ROOT/sky130A/libs.ref -iname "*io*.v" -o -iname "*stdcell*.v"
-      
+ gl_test:
+  needs: gds
+  runs-on: ubuntu-24.04
+  steps:
+    - name: checkout repo
+      uses: actions/checkout@v6
+      with:
+        submodules: recursive
+    - name: Verify PDK files exist
+      run: |
+        if [ ! -f "$PDK_ROOT/sky130A/libs.ref/sky130_fd_io/verilog/sky130_ef_io__gpiov2.v" ]; then
+          echo "ERROR: sky130_ef_io__gpiov2.v not found at $PDK_ROOT/sky130A/libs.ref/sky130_fd_io/verilog/"
+          echo "Available io files:"
+          find $PDK_ROOT/sky130A/libs.ref -path "*io*" -name "*.v" 2>/dev/null || echo "No io files found"
+          exit 1
+        fi
+    - name: GL test
+      uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
+      with:
+        pdk: sky130A
   viewer:
     needs: gds
     runs-on: ubuntu-24.04
