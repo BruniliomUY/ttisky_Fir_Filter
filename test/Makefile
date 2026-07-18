@@ -28,8 +28,10 @@ SIM_BUILD				= sim_build/gl
 COMPILE_ARGS    += -DGL_TEST
 COMPILE_ARGS    += -DFUNCTIONAL
 COMPILE_ARGS    += -DSIM
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_io/verilog/sky130_ef_io__gpiov2.v
 VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
+-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_io/verilog/sky130_ef_io__gpiov2.v
++PDK_IO_DIR := $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_io/verilog
++VERILOG_SOURCES += $(PDK_IO_DIR)/sky130_fd_io__gpiov2.v
 
 # this gets copied in by the GDS action workflow
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
