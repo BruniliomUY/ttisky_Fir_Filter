@@ -95,7 +95,11 @@ async def test_allpass_tracks_input(dut):
     await settle_filter(dut, test_value)
 
     # NOTA: la instancia del DUT en tb.v se llama "fir_filter", no "user_project".
-    fir_out = to_signed8(dut.fir_filter.fir_output.value)
+    # NOTA: usamos dut.uo_out (pin de top-level) en vez de la señal interna
+    # fir_output. Esta ultima no sobrevive a la sintesis: en gate-level, los
+    # nombres de cables internos se aplanan/renombran y solo los PUERTOS del
+    # modulo top persisten. uo_out funciona igual en RTL y en gate-level.
+    fir_out = to_signed8(dut.uo_out.value)
     dut._log.info(f"fir_output (allpass) = {fir_out}, esperado ~ {test_value}")
 
     # Tolerancia amplia a proposito: solo confirmamos que sigue la entrada,
@@ -123,7 +127,7 @@ async def test_filter_select_changes_output(dut):
         await reset_dut(dut)
         set_filter(dut, sel)
         await settle_filter(dut, 40)
-        outputs[name] = to_signed8(dut.fir_filter.fir_output.value)
+        outputs[name] = to_signed8(dut.uo_out.value)
         dut._log.info(f"fir_output ({name}) = {outputs[name]}")
 
     assert len(set(outputs.values())) > 1, (
