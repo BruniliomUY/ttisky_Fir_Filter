@@ -36,7 +36,7 @@ module SatTruncFP
 	generate
 	   if (NBF_XI >= NBF_XO)
 	     begin : gen_trunc_wide
-		assign	aux_trunc = i_data[(NBF_XI-1):(NBF_XI - NBF_XO)];
+		assign aux_trunc = i_data[NBF_XI-1 -: NBF_XO];
 	     end
 	   else
 	     begin : gen_trunc_narrow
