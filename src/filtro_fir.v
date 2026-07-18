@@ -171,14 +171,17 @@ module filtro_fir
     end
   end
 
-  SatTruncFP
-    #(
-      .NB_XI  ( WW_ACC ) // 19 bits (NBF_XI se deja en su default, 12)
-      )
-    inst_SatTruncFP_dataB
-    (
-      .i_data ( sum_final ),
-      .o_data ( o_data )
-    );
+SatTruncFP
+  #(
+    .NB_XI  ( WW_ACC ),        // 19
+    .NBF_XI ( WW_COEFF - 1 ),  // must evaluate to 7
+    .NB_XO  ( WW_OUTPUT ),     // 8
+    .NBF_XO ( 0 )
+    )
+  inst_SatTruncFP_dataB
+  (
+    .i_data ( sum_final ),
+    .o_data ( o_data )
+  );
 
 endmodule
