@@ -9,14 +9,13 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-This proyects is a FIR(Finite Impulse Response) used us a filtter. In this case use typical fixed point aproach and 11 different cofficients with 4 different types to select().It is design to acept digital audio signal into the (ui_in) with 4kHz bandwith. 
-When the signal enter to the system it is proccees by the FIR and sended through the uart_tx.v to get the filltered sigal,
+This proyects is a FIR(Finite Impulse Response) used us a filtter. In this case use typical fixed point aproach and 11 different cofficients with 4 different types to select.It is design to acept digital audio signal into the (ui_in) with 4kHz bandwith. 
+When the signal enter to the system it is proccees by the FIR and sended through the uart_tx.v to get the filltered signal,
 Implement 4 different fillters:
 Hight pass 
 Low pass
 Band pass
 All pass 
-## Frequency Response
 
 ![Frequency Response](filter_frequency_response.png)
 
